@@ -30,4 +30,27 @@ router.post('/image', authenticate, upload.single('image'), (req, res) => {
   res.json({ imageUrl });
 });
 
+router.post('/base64', authenticate, (req, res) => {
+  try {
+    const { base64 } = req.body;
+    if (!base64) return res.status(400).json({ error: 'No se recibió imagen' });
+
+    const matches = base64.match(/^data:image\/([a-zA-Z]+);base64,/);
+    const ext     = matches ? matches[1] : 'jpg';
+    const data    = base64.replace(/^data:image\/\w+;base64,/, '');
+    const buffer  = Buffer.from(data, 'base64');
+    const filename = `${Date.now()}-${req.user.id}.${ext}`;
+    const filepath = path.join(uploadsDir, filename);
+
+    fs.writeFileSync(filepath, buffer);
+
+    const baseUrl  = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
+    const imageUrl = `${baseUrl}/uploads/${filename}`;
+    res.json({ imageUrl });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al procesar imagen' });
+  }
+});
+
 module.exports = router;
