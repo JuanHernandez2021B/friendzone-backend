@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  age       Int
+  bio       String?
+  avatar    String?
+  interests String[]
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sentRequests     FriendRequest[] @relation("Sender")
+  receivedRequests FriendRequest[] @relation("Receiver")
+  friendshipsA     Friendship[]    @relation("UserA")
+  friendshipsB     Friendship[]    @relation("UserB")
+  messagesSent     Message[]
+  chatsAsA         Chat[]          @relation("ChatUserA")
+  chatsAsB         Chat[]          @relation("ChatUserB")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model FriendRequest {
+  id         Int           @id @default(autoincrement())
+  senderId   Int
+  receiverId Int
+  status     RequestStatus @default(PENDING)
+  createdAt  DateTime      @default(now())
+
+  sender   User @relation("Sender",   fields: [senderId],   references: [id], onDelete: Cascade)
+  receiver User @relation("Receiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, receiverId])
+}
+
+enum RequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model Friendship {
+  id        Int      @id @default(autoincrement())
+  userAId   Int
+  userBId   Int
+  createdAt DateTime @default(now())
+
+  userA User @relation("UserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB User @relation("UserB", fields: [userBId], references: [id], onDelete: Cascade)
+
+  @@unique([userAId, userBId])
+}
+
+model Chat {
+  id        Int      @id @default(autoincrement())
+  userAId   Int
+  userBId   Int
+  createdAt DateTime @default(now())
+
+  userA    User      @relation("ChatUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB    User      @relation("ChatUserB", fields: [userBId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@unique([userAId, userBId])
+}
+
+model Message {
+  id        Int         @id @default(autoincrement())
+  chatId    Int
+  senderId  Int
+  content   String?
+  imageUrl  String?
+  type      MessageType @default(TEXT)
+  createdAt DateTime    @default(now())
+
+  chat   Chat @relation(fields: [chatId],   references: [id], onDelete: Cascade)
+  sender User @relation(fields: [senderId], references: [id], onDelete: Cascade)
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+}
